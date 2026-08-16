@@ -1,0 +1,4 @@
+%PDF-1.4
+This is not actually a valid PDF body — truncated/malformed on purpose
+for the error-handling path (corrupted-file rejection test).
+%%GARBAGE%%

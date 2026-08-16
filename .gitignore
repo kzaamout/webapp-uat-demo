@@ -1,0 +1,15 @@
+node_modules/
+.next/
+.env
+*.log
+storage/
+.webapp-uat.pid
+*.tsbuildinfo
+next-env.d.ts
+
+# webapp-uat run artifacts — generated per run, not source
+uat/runs/*
+!uat/runs/.gitkeep
+uat/artifacts/*
+!uat/artifacts/.gitkeep
+.claude/skills/webapp-uat/discovered-environment.md

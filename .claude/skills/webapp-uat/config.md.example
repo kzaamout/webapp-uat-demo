@@ -1,0 +1,65 @@
+# webapp-uat config
+
+Copy this file to `config.md` in this same folder and fill it in. `SKILL.md` itself
+is never hand-edited — every project-specific fact lives here instead, so upgrading
+the skill later is just replacing `SKILL.md`/`USAGE.md` wholesale.
+
+## Required
+
+```
+project-name: <your project's name — shown in report headers>
+project-dir: <absolute path to your app's repo root>
+```
+
+## Bug-fix mechanism
+
+How Phase 4 assesses, fixes, and tests a confirmed bug.
+
+```
+bug-fix-mechanism: direct
+```
+
+- `direct` (default) — Claude assesses the finding in-session (root cause, proposed
+  fix, affected files), presents that at the same review checkpoint a workflow tool's
+  assessment step would, then fixes it directly. Testing falls back to the project's
+  existing test suite if one exists, otherwise the Phase 4 browser retest is the only
+  verification — noted explicitly in the finding either way.
+- `spec-kit` — if this repo uses [Spec Kit](https://github.com/github/spec-kit) with
+  its bug-workflow extension installed, set this and also fill in:
+  ```
+  bug-assess-command: <exact command, from `specify extension list`>
+  bug-fix-command: <exact command, from `specify extension list`>
+  bug-test-command: <exact command, from `specify extension list`>
+  ```
+
+## Spec source
+
+Used by `generate`'s spec-derived/boundary-derived sources and Phase 2's
+UI-conformance check. Point this at wherever acceptance criteria actually live.
+
+```
+spec-dir: specs/
+```
+
+No spec directory, or specs live somewhere this convention doesn't fit? Leave this
+unset — spec-derived generation and UI-conformance-against-spec are skipped, noted in
+the run's output, everything else still works.
+
+## Review defaults
+
+```
+review-before-fix: on
+```
+
+Same meaning as the `--review-before-fix` / `--no-review-before-fix` flags — this is
+just the project-level default when neither flag is passed. See `USAGE.md`.
+
+## Backend verification (optional)
+
+What Phase 0.5's discovery already finds on its own (API read endpoints, DB/vector
+store connection methods) doesn't need restating here. Only set this if you want to
+short-circuit discovery with something it can't infer on its own:
+
+```
+# backend-stores: postgres, qdrant
+```

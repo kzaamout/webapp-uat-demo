@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  GUEST
+}
+
+enum Visibility {
+  PRIVATE
+  TEAM
+  PUBLIC
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  documents    Document[]   @relation("DocumentAuthor")
+  comments     Comment[]
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  memberships Membership[]
+  documents   Document[]
+}
+
+model Membership {
+  id     String @id @default(cuid())
+  userId String
+  teamId String
+  role   Role
+  user   User   @relation(fields: [userId], references: [id])
+  team   Team   @relation(fields: [teamId], references: [id])
+
+  @@unique([userId, teamId])
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  teamId      String
+  authorId    String
+  title       String       @db.VarChar(120)
+  body        String       @db.VarChar(5000)
+  tags        String[]
+  visibility  Visibility   @default(TEAM)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  team        Team         @relation(fields: [teamId], references: [id])
+  author      User         @relation("DocumentAuthor", fields: [authorId], references: [id])
+  attachments Attachment[]
+  comments    Comment[]
+}
+
+model Attachment {
+  id          String   @id @default(cuid())
+  documentId  String
+  filename    String
+  mimeType    String
+  sizeBytes   Int
+  storagePath String
+  createdAt   DateTime @default(now())
+  document    Document @relation(fields: [documentId], references: [id])
+}
+
+// Comment.body's DB column is deliberately narrower (1000) than the app-level
+// zod validation max (2000, in src/lib/validation.ts). This latent mismatch is
+// what DEMO_BUG_SILENT_COMMENT_FAILURE exploits — see README.md.
+model Comment {
+  id         String   @id @default(cuid())
+  documentId String
+  authorId   String
+  body       String   @db.VarChar(1000)
+  createdAt  DateTime @default(now())
+  document   Document @relation(fields: [documentId], references: [id])
+  author     User     @relation(fields: [authorId], references: [id])
+}
