@@ -60,7 +60,7 @@ export default async function DocumentDetailPage({
                   href={`/api/teams/${team.id}/documents/${document.id}/attachments/${a.id}`}
                   className="text-sm text-blue-600 underline"
                 >
-                  {a.filename} ({Math.round(a.sizeBytes / 1024)} KB)
+                  {a.filename} ({a.sizeBytes < 1024 ? `${a.sizeBytes} B` : `${Math.round(a.sizeBytes / 1024)} KB`})
                 </a>
               </li>
             ))}

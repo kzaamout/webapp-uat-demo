@@ -14,7 +14,7 @@ export function Nav({
       <Link href="/teams" className="font-medium">
         ← Teams
       </Link>
-      <span className="text-gray-400">/</span>
+      <span className="text-gray-600">/</span>
       <span className="font-medium">{teamName}</span>
       <Link href={`/teams/${teamId}/documents`} className="text-gray-600 hover:underline">
         Documents
@@ -27,7 +27,7 @@ export function Nav({
       <Link href={`/teams/${teamId}/settings`} className="text-gray-600 hover:underline">
         Settings
       </Link>
-      <span className="ml-auto text-gray-400">Signed in as {role}</span>
+      <span className="ml-auto text-gray-600">Signed in as {role}</span>
     </nav>
   );
 }

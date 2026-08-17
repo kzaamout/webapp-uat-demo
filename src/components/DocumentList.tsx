@@ -32,7 +32,7 @@ export function DocumentList({
           <Link href={`/teams/${teamId}/documents/${doc.id}`} className="block px-4 py-3 hover:bg-gray-50">
             <div className="flex items-center justify-between">
               <span className="font-medium">{doc.title}</span>
-              <span className="text-xs uppercase text-gray-400">{doc.visibility}</span>
+              <span className="text-xs uppercase text-gray-600">{doc.visibility}</span>
             </div>
             <div className="mt-1 text-sm text-gray-500">
               by {doc.author.name} · {doc.tags.join(", ") || "no tags"}
