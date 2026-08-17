@@ -13,3 +13,4 @@ uat/runs/*
 uat/artifacts/*
 !uat/artifacts/.gitkeep
 .claude/skills/webapp-uat/discovered-environment.md
+.claude/skills/webapp-uat/config.md

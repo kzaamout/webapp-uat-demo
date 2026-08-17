@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Start/stop/wait-ready for the app under test. Fill in the four values below for
-# your project, then confirm each of start/stop/wait-ready works once, run manually,
-# before trusting webapp-uat to rely on it.
+# Start/stop/wait-ready for the app under test.
 #
 # This script's mechanism (edit-by-hand, one command each for start/stop) is a known
 # rough edge — see the webapp-uat project's docs/design-history.md for where this is
 # headed.
+#
+# PROJECT_DIR is resolved relative to this script's own location rather than
+# hardcoded, since this app and this script live in the same repo and this repo
+# may be checked out standalone or as a submodule at any parent path.
 
 set -u
 
-PROJECT_DIR="/Users/kzaamout/Desktop/code/webapp-uat-demo"  # this repo's own root
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 START_COMMAND="./run.sh"            # brings up everything the app needs (backend, db, etc.)
 STOP_COMMAND="docker compose down"  # anything START_COMMAND doesn't tear down via SIGINT
 PORT=3000                           # what the app serves its health check on
