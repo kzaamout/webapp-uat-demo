@@ -101,8 +101,10 @@ resume-vs-fresh-start choice (defaults to fresh start under `--silent`).
 
 **Never skipped, `--silent` or not:** the high-risk stop-and-ask for
 security/auth/data-deletion/architecture bugs, the DB-write confirmation for seeding
-or cleaning up test data, and Phase 5's spec-update choice (defaults to *review only*
-under `--silent` rather than touching a spec file automatically).
+or cleaning up test data, Phase 5's spec-update choice (defaults to *review only*
+under `--silent` rather than touching a spec file automatically), and — under
+`bug-fix-mechanism: spec-kit` — the pause when a configured bug-workflow command
+itself fails to run (a tool-invocation failure, not a routine decision).
 
 ### `--priority <tiers>`
 
@@ -235,9 +237,12 @@ explicit confirmation as the start-of-run purge.
 .claude/skills/webapp-uat/
   SKILL.md                        the skill itself — never hand-edited per project
   USAGE.md                        this file
+  SETUP.md                        one-time setup checklist
   config.md.example               template — copy to config.md and fill in
   config.md                       your project's settings (you create this)
   discovered-environment.md       cached environment facts (auto-created)
+  templates/                      bundled dev.sh/_template.md copies (plugin installs)
+  vendor/axe.min.js               bundled axe-core for the accessibility audit
 
 uat/
   scenarios/
@@ -294,8 +299,10 @@ batch/parallel bug-fixing).
 
 - **Complete, clean:** every scenario passed, or every bug found was fixed and
   browser-verified.
-- **Complete, partial:** some bugs remain unresolved after the retry budget —
-  documented in the final report.
+- **Complete, partial:** some bugs remain unresolved — documented in the final
+  report, which names why per bug: retry budget exhausted, the run stopped by the
+  restart-failure threshold, or (spec-kit mechanism) a bug-workflow command itself
+  failed to run — three distinct failure modes, never one undivided label.
 - **Blocked:** environment/fixture/Chrome problem paused the run before it could
   finish.
 - **Cancelled:** Cancel chosen at the Phase 1 gate — nothing was touched.

@@ -3,9 +3,22 @@
 One-time checklist to get `/webapp-uat` running against your app. For what the skill
 actually does once it's running, see `README.md`; for full command syntax, `USAGE.md`.
 
-## 1. Copy the skill into your app's repo
+## 1. Get the skill into your app's repo
 
-From this skill's source repo, copy into your app's repo root:
+**One-command path** (recommended), from inside your app's repo:
+
+```
+/plugin marketplace add kzaamout/claude-uat-skill
+/plugin install webapp-uat@webapp-uat-marketplace
+```
+
+Installs `.claude/skills/webapp-uat/` for you. `scripts/dev.sh` and
+`uat/scenarios/_template.md` still need to land in your repo's own tree (a plugin
+install can only place files under `.claude/`) — step 2 below (`/webapp-uat setup`)
+does that for you automatically, copying them from templates bundled inside the
+installed skill.
+
+**Manual alternative**, from this skill's source repo, copy into your app's repo root:
 
 ```
 .claude/skills/webapp-uat/    (this whole folder)
@@ -13,8 +26,8 @@ uat/scenarios/_template.md
 scripts/dev.sh
 ```
 
-This has to happen before Claude Code can do anything else here — `/webapp-uat`
-doesn't exist as a command until these files are in place.
+Either way, this has to happen before Claude Code can do anything else here —
+`/webapp-uat` doesn't exist as a command until these files are in place.
 
 ## 2. Run the setup wizard
 
@@ -66,6 +79,10 @@ scripts/dev.sh start
 scripts/dev.sh wait-ready
 scripts/dev.sh stop
 ```
+
+`start` writes two files into your repo (`dev.log`, `.webapp-uat.pid`). Add both to
+your `.gitignore` — Phase 0 requires a clean git working tree before every run, so
+leaving them untracked-and-unignored blocks the very next run.
 
 ## 4. Confirm Chrome is actually connected
 
