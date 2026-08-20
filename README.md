@@ -1,7 +1,8 @@
 # Team Documents — a `webapp-uat` demo
 
 A small internal document-library app, built specifically to exercise every core
-capability of the [`webapp-uat`](https://github.com/) Claude Code skill — not a real
+capability of the [`webapp-uat`](https://github.com/kzaamout/claude-uat-skill)
+Claude Code skill — not a real
 product. This repo is deliberately self-contained: the skill is already installed at
 `.claude/skills/webapp-uat/`, already configured (`config.md`), and already has a
 starter set of real scenarios in `uat/scenarios/`. Clone it, run it, and you can
