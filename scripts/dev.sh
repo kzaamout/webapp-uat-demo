@@ -15,6 +15,9 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 START_COMMAND="./run.sh"            # brings up everything the app needs (backend, db, etc.)
 STOP_COMMAND="docker compose down"  # anything START_COMMAND doesn't tear down via SIGINT
 PORT=3000                           # what the app serves its health check on
+WAIT_TIMEOUT="${WAIT_TIMEOUT:-30}"  # wait-ready gives up after ~this many seconds
+                                    # (one check per second); slow-booting apps can
+                                    # raise the default here or per-run via env
 
 PIDFILE="$PROJECT_DIR/.webapp-uat.pid"
 
@@ -43,14 +46,14 @@ case "${1:-}" in
     echo "Stopped"
     ;;
   wait-ready)
-    for i in $(seq 1 30); do
+    for i in $(seq 1 "$WAIT_TIMEOUT"); do
       if curl -sf "http://localhost:$PORT" > /dev/null; then
         echo "Ready"
         exit 0
       fi
       sleep 1
     done
-    echo "Timed out waiting for localhost:$PORT"
+    echo "Timed out after ~${WAIT_TIMEOUT}s waiting for localhost:$PORT"
     exit 1
     ;;
   *)

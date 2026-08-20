@@ -65,7 +65,9 @@ cp .claude/skills/webapp-uat/config.md.example .claude/skills/webapp-uat/config.
 Fill in `config.md` by hand — `project-name`, `project-dir`, `bug-fix-mechanism`,
 `spec-dir` (optional), `review-before-fix` — then open `scripts/dev.sh` and fill in
 `PROJECT_DIR`, `START_COMMAND`, `STOP_COMMAND`, `PORT` to match how your app actually
-starts, stops, and reports itself ready.
+starts, stops, and reports itself ready. `WAIT_TIMEOUT` (default 30, roughly seconds)
+is worth raising there for a slow-booting app — it's also overridable per-run via the
+environment.
 
 `SKILL.md`/`USAGE.md` themselves are never hand-edited either way — everything
 project-specific lives in `config.md`.
