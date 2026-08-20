@@ -114,8 +114,11 @@ itself fails to run (a tool-invocation failure, not a routine decision).
 
 ## Configuration
 
-Every project-specific fact lives in `config.md` in this same folder (never in
-`SKILL.md` itself). Two ways to create it: `/webapp-uat setup` (recommended — proposes
+Every project-specific fact lives in `config.md` at
+`.claude/skills/webapp-uat/config.md` in your project's own tree (never in `SKILL.md`
+itself). For a manual install that's the same folder as this file; for a plugin
+install the skill's files live in the read-only plugin cache instead, so setup
+creates the project-local directory and writes `config.md` there. Two ways to create it: `/webapp-uat setup` (recommended — proposes
 values from the repo) or copying `config.md.example` by hand. See `SETUP.md`.
 
 ```markdown

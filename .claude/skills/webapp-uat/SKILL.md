@@ -8,10 +8,16 @@ same folder. This file is the operating logic; `USAGE.md` is the human-facing re
 and what `--help` prints.
 
 This file is never hand-edited per project — every project-specific fact (project
-path, bug-fix mechanism, spec location, review defaults) lives in `config.md` in this
-same folder. No `config.md` yet → run `/webapp-uat setup` (recommended — proposes
-values from the repo itself, see Setup mode below) or fill in `config.md.example` by
-hand; see `SETUP.md`.
+path, bug-fix mechanism, spec location, review defaults) lives in `config.md` at
+`.claude/skills/webapp-uat/config.md` **in the project's own tree**. For a manual
+(copy-by-hand) install that's the same folder as this file; for a plugin install it
+is deliberately not — a plugin-installed skill's own files live in the plugin cache
+under `~/.claude/plugins/`, which is read-only, shared across every project using the
+plugin, and replaced wholesale on plugin update, so per-project files (`config.md`,
+`discovered-environment.md`) are never written next to this file there. Setup mode
+creates the project-local directory when it's missing. No `config.md` yet → run
+`/webapp-uat setup` (recommended — proposes values from the repo itself, see Setup
+mode below) or fill in `config.md.example` by hand; see `SETUP.md`.
 
 ---
 
@@ -42,7 +48,8 @@ hand; see `SETUP.md`.
   a one-time, low-frequency prompt, not routine run-to-run friction.
 - `--priority` outside generation mode, or a scope path that doesn't resolve to
   anything readable: flag it and ask, don't guess.
-- No `config.md` in this folder, and the command isn't `setup` or `--help`: offer to
+- No `config.md` at the project-local path above, and the command isn't `setup` or
+  `--help`: offer to
   run setup mode now (recommended) rather than stopping cold — decline it and this
   points at `SETUP.md` for the manual path instead. Either way, nothing else in this
   file runs until `config.md` exists.
@@ -56,9 +63,12 @@ A discovery-assisted config wizard: inspects the repo this skill is installed in
 them down by hand. Never writes anything without a confirmation step — same
 propose → confirm → write pattern `generate` already uses for scenarios.
 
-1. **Locate the repo root** (`git rev-parse --show-toplevel` from this skill's own
-   location). Ambiguous — e.g. this skill sitting inside a nested package of a
-   monorepo — ask rather than guessing which root is intended.
+1. **Locate the repo root** — `git rev-parse --show-toplevel` from the current
+   working directory (the project being set up), never from this skill's own file
+   location: a plugin-installed skill's files resolve to the marketplace clone under
+   `~/.claude/plugins/`, whose repo root is the *skill's* repo, not the project's.
+   Ambiguous — e.g. this skill sitting inside a nested package of a monorepo — ask
+   rather than guessing which root is intended.
 2. **Detect the start/stop/health-check mechanism**, most-specific evidence first:
    - `run.sh`/`start.sh` at the repo root alongside `docker-compose.yml`/
      `compose.yaml` → propose that script as start, `docker compose down` as stop.
@@ -90,7 +100,11 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    ambiguous, or — as with `project-name` — never detectable at all) — never blended
    together as if equally trustworthy. Ask: **write this** / **edit values first** /
    **cancel**.
-6. On approval: write `config.md`. If `scripts/dev.sh` doesn't already exist in the
+6. On approval: write `config.md` to `<repo root>/.claude/skills/webapp-uat/config.md`,
+   creating that directory first if it doesn't exist (the plugin-install case — never
+   write it into the plugin's own install location under `~/.claude/plugins/`, which
+   is read-only, shared across projects, and discarded on update). If `scripts/dev.sh`
+   doesn't already exist in the
    target repo — the case when this skill was installed as a plugin rather than
    copied by hand, since a plugin install only places files under `.claude/` — copy
    it from this skill's own bundled `templates/dev.sh.template`, then fill in the
