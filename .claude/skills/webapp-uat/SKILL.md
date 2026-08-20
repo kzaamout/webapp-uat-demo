@@ -98,7 +98,15 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    placeholders in place. Same pattern for `uat/scenarios/_template.md` from
    `templates/_template.md`, verbatim (no placeholders to fill in that one).
    `mkdir -p uat/scenarios uat/runs uat/artifacts uat/fixtures` for whichever don't
-   already exist. **Does not** run `scripts/dev.sh start/stop/wait-ready` itself —
+   already exist. Then check that the two files `scripts/dev.sh start` will generate
+   in this repo — `dev.log` and `.webapp-uat.pid` — are gitignored: test each with
+   `git check-ignore`, not by grepping for literal lines, so an existing pattern like
+   `*.log` counts as coverage. Whichever isn't covered, append to the repo's
+   `.gitignore` (creating the file if it doesn't exist) as part of this same write
+   step — Phase 0 requires a clean working tree before every run, so leaving these
+   un-ignored means the first `start` blocks the very next run. Already covered →
+   left as-is, reported like every other item. **Does not** run
+   `scripts/dev.sh start/stop/wait-ready` itself —
    that stays a manual verification step (Phase 0 sanity-checks it on the first real
    run regardless; starting/stopping the app before the user has reviewed anything
    this wizard proposed would be jumping ahead of consent, not saving a step).
@@ -110,6 +118,7 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    uat/scenarios/ ............... already existed, left as-is
    uat/runs/ ..................... created
    uat/artifacts/ ................ created
+   .gitignore ................... 1 entry appended (.webapp-uat.pid; dev.log already covered by *.log)
    uat/fixtures/ ................. FAILED — permission denied creating directory
    ```
    If one item fails partway through, this is **best-effort, not atomic**: every
