@@ -1,6 +1,7 @@
 ---
 name: webapp-uat
 description: Run or generate an end-user UAT pass on a web app — review/generate scenarios, test in Chrome with backend verification, classify findings by category and severity, fix confirmed bugs (with restart + browser retest), document everything else, and report back with next-step options. Supports --help, generate, --silent, and --review-before-fix.
+allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh *)
 ---
 
 Full syntax, examples, and exact expected output at every phase: `USAGE.md` in this
@@ -21,10 +22,52 @@ mode below) or fill in `config.md.example` by hand; see `SETUP.md`.
 
 ---
 
+## Managed files
+
+Two files this skill owns have to live in the project's own tree, because a plugin
+install can only place files under `.claude/`: `scripts/dev.sh` (the app start/stop
+engine) and `uat/scenarios/_template.md`. Each carries a marker in its first lines
+("webapp-uat managed file"). That marker is the only permission this skill has to
+overwrite a file, and it does so whenever the project copy differs from the copy
+bundled in the installed skill — no version numbers, no merging. Everything the
+project owns — `scripts/dev.env` (the values the engine reads), `config.md`,
+`discovered-environment.md`, scenarios, fixtures, runs — is never written by that
+step. A user who deletes the marker line takes ownership: the file is then reported
+as unmanaged once per run and never touched.
+
+Status at load, computed by the bundled sync script (byte comparison; exits 0 always):
+
+!`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --check`
+
+Read those lines before anything else, in every mode including `--help`: if any
+managed file is not `in-sync`, or the `values-file` line says `missing`, print those
+lines to the user verbatim as the first thing you say, then continue with the mode
+that was invoked. Every file `in-sync` and the values file present → say nothing
+about managed files. A policy placeholder instead of status lines (an organization
+setting disabled shell execution in skills) → say nothing; Phase 0 runs the same
+check itself. Applying an update is Phase 0's job (and Setup mode's), never the
+load step's.
+
+Every file bundled with this skill — `templates/`, `vendor/axe.min.js`,
+`scripts/sync-managed.sh` — is addressed as `${CLAUDE_SKILL_DIR}/<path>`, which
+resolves to this skill's own folder for a plugin install (the plugin cache), a
+project-level install, or a manual copy alike. Never assume the skill folder is
+inside the project tree. For a plugin install that folder is outside the project,
+and Claude Code blocks direct reads there (`Read`, `cat`, …) — but running the
+bundled script is pre-authorized, so read any bundled file through it:
+`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --print <path>` (e.g.
+`--print USAGE.md` for `--help`, `--print vendor/axe.min.js` for the accessibility
+check, `--print templates/dev.env.example`). Write the command exactly like that —
+no extra quoting — so it matches the pre-authorized prefix.
+
+---
+
 ## Phase -1 — Invocation parsing
 
-- The invocation includes `--help` anywhere: stop reading this file and instead
-  **read `USAGE.md` in full and print its exact contents as the response, verbatim,
+- The invocation includes `--help` anywhere: after the managed-files status lines
+  (if any were due — see "Managed files" above), stop reading this file and instead
+  **read `USAGE.md` in full (`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --print USAGE.md`)
+  and print its exact contents as the response, verbatim,
   then stop** — do not describe, summarize, or paraphrase `USAGE.md`, and do not
   fall back to describing this file (`SKILL.md`) instead. No git check, no Chrome,
   no app, nothing touched. Safe to run anytime.
@@ -59,7 +102,7 @@ mode below) or fill in `config.md.example` by hand; see `SETUP.md`.
 ## Setup mode — `/webapp-uat setup`
 
 A discovery-assisted config wizard: inspects the repo this skill is installed in and
-*proposes* `config.md` and `scripts/dev.sh` values instead of requiring you to hunt
+*proposes* `config.md` and `scripts/dev.env` values instead of requiring you to hunt
 them down by hand. Never writes anything without a confirmation step — same
 propose → confirm → write pattern `generate` already uses for scenarios.
 
@@ -84,6 +127,11 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    - **Port:** read `PORT` from `.env`/`.env.example`, or a dev-server config
      (`vite.config.*`, `next.config.*`), or a compose port mapping. Nothing found →
      propose `3000`, explicitly labeled a **guess**, not a detected fact.
+   - These become `scripts/dev.env`'s `START_COMMAND` / `STOP_COMMAND` / `PORT`.
+     Propose `READY_COMMAND` only with evidence that a port answering isn't the same
+     as ready (a health-check route, a compose `healthcheck`), and `WAIT_TIMEOUT`
+     only with evidence of a slow boot — otherwise leave both out and let the
+     engine's defaults apply. Never propose a project path: the engine derives it.
 3. **Detect the bug-fix mechanism** — a `.specify/` directory, or `specify` on PATH,
    → propose `bug-fix-mechanism: spec-kit`. The exact `bug-assess-command` /
    `bug-fix-command` / `bug-test-command` values are never guessed at — surface
@@ -92,7 +140,8 @@ propose → confirm → write pattern `generate` already uses for scenarios.
 4. **Detect `spec-dir`** — a `specs/` directory containing `spec.md` files, or an
    equivalent convention → propose it. Nothing found → leave unset, note that
    spec-derived generation and the UI-conformance check will no-op without it.
-5. **Present one consolidated draft**, including `project-name` — always asked
+5. **Present one consolidated draft** — `config.md` plus the `scripts/dev.env`
+   block — including `project-name` — always asked
    directly and labeled **needs your input**, since nothing in the repo itself can
    supply a human-chosen project name. Every value labeled **detected** (concrete
    evidence found — name the evidence), **guessed** (a heuristic default, no real
@@ -103,14 +152,24 @@ propose → confirm → write pattern `generate` already uses for scenarios.
 6. On approval: write `config.md` to `<repo root>/.claude/skills/webapp-uat/config.md`,
    creating that directory first if it doesn't exist (the plugin-install case — never
    write it into the plugin's own install location under `~/.claude/plugins/`, which
-   is read-only, shared across projects, and discarded on update). If `scripts/dev.sh`
-   doesn't already exist in the
-   target repo — the case when this skill was installed as a plugin rather than
-   copied by hand, since a plugin install only places files under `.claude/` — copy
-   it from this skill's own bundled `templates/dev.sh.template`, then fill in the
-   copy's placeholders; if it already exists (the manual-copy path), fill in its
-   placeholders in place. Same pattern for `uat/scenarios/_template.md` from
-   `templates/_template.md`, verbatim (no placeholders to fill in that one).
+   is read-only, shared across projects, and discarded on update). Then
+   `scripts/dev.env`: a new file → write it from the approved values, one
+   `KEY='value'` line per key — `START_COMMAND`, `STOP_COMMAND`, `PORT`, then
+   `WAIT_TIMEOUT` / `READY_COMMAND` only when proposed (the keys
+   `templates/dev.env.example` documents; `--print templates/dev.env.example` shows it); an existing one → per-key current-vs-proposed
+   with per-key approval, exactly as step 7 does for `config.md`, and only accepted
+   keys change. Never write project values into `scripts/dev.sh` — it is a managed
+   file with none in it (see "Managed files" above). Then the managed files
+   themselves: run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --check` and act
+   on its output first — `legacy` (a pre-marker `scripts/dev.sh` with values written
+   into it) → run `--legacy-values`, show the values it keeps (start command, stop
+   command, port; the old absolute project path is dropped because the managed
+   engine derives it) and use them as the `dev.env` proposal above (discovery fills
+   only keys the legacy file lacks); on approval delete the legacy file so `--apply`
+   replaces it. `unmanaged` (marker removed by the user) → offer "replace with the
+   managed version — your edits are lost" / "keep yours"; delete only on an explicit
+   yes. Then run `--apply` and report each managed file from its own output line
+   (`created` / `updated` / `in-sync` / `skipped-unmanaged` / `skipped-legacy`).
    `mkdir -p uat/scenarios uat/runs uat/artifacts uat/fixtures` for whichever don't
    already exist. Then check that the two files `scripts/dev.sh start` will generate
    in this repo — `dev.log` and `.webapp-uat.pid` — are gitignored: test each with
@@ -127,8 +186,9 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    Report every item's outcome individually once the write step finishes, e.g.:
    ```
    config.md ................... written
-   scripts/dev.sh ............... written (from bundled template)
-   uat/scenarios/_template.md ... written (from bundled template)
+   scripts/dev.env .............. written
+   scripts/dev.sh ............... created (managed — from the installed skill)
+   uat/scenarios/_template.md ... in sync
    uat/scenarios/ ............... already existed, left as-is
    uat/runs/ ..................... created
    uat/artifacts/ ................ created
@@ -151,7 +211,38 @@ propose → confirm → write pattern `generate` already uses for scenarios.
 
 ## Phase 0 — Pre-flight
 
-- **Validate `config.md`'s internal consistency** before anything else in this phase:
+- **Managed files** — first, before anything else in this phase. From the project
+  root, run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --apply` and act on
+  its output line by line:
+  - `updated` / `created` → those files were just brought to the installed skill's
+    version. `changed: N` with N > 0 → commit exactly the paths on the
+    `changed-paths:` line and nothing else: `git add <those paths>` then
+    `git commit -m "chore(webapp-uat): update managed files (<comma-separated paths>)"`.
+    No confirmation, `--silent` or not — these files carry no project data, and the
+    clean-tree check below would otherwise block every run right after every skill
+    update. Never `git add -A`; unrelated uncommitted changes are the clean-tree
+    check's business. Keep the list (and the commit) for the final report.
+  - `skipped-unmanaged` → the marker was removed; leave the file alone. Print one
+    line: "`<path>` is unmanaged (marker removed) — `/webapp-uat setup` can re-adopt
+    it." Keep it for the final report.
+  - `skipped-legacy` (a pre-marker `scripts/dev.sh` with values written into it) →
+    it still works and the run may use it. Not `--silent` → offer migration now: run
+    `--legacy-values`, show the values it keeps (start command, stop command, port;
+    the old absolute project path is dropped because the engine derives it), and
+    ask. Confirmed → write `scripts/dev.env` from those lines, delete the legacy
+    `scripts/dev.sh`, run `--apply` again (it reports `created`), then one
+    path-scoped commit of `scripts/dev.sh` + `scripts/dev.env`:
+    `chore(webapp-uat): migrate scripts/dev.sh to managed engine + scripts/dev.env`.
+    Declined, or `--silent` → continue with the legacy wrapper and keep "legacy
+    `scripts/dev.sh` left unmigrated — `/webapp-uat setup` migrates it" for the
+    final report.
+  - `values-file … missing` and `scripts/dev.sh` was **not** `skipped-legacy` → stop:
+    the managed engine can't run without `scripts/dev.env`. Say "run
+    `/webapp-uat setup`". (A legacy wrapper needs no `dev.env`.)
+  - The script can't be found, or exits non-zero → print "managed files could not
+    be checked (<reason>)" and continue with the files as they are. Never block a
+    run on this step.
+- **Validate `config.md`'s internal consistency** right after the managed-files step:
   `bug-fix-mechanism: spec-kit` declared without all three of `bug-assess-command` /
   `bug-fix-command` / `bug-test-command` filled in is caught and flagged here — ask
   the user to fill in the missing command(s) (or switch to `direct`) rather than
@@ -360,7 +451,9 @@ For each approved scenario:
 4. Note actual vs. expected result.
 5. **Expanded checks**, every scenario:
    - **Accessibility:** inject axe-core from this skill's own bundled copy
-     (`.claude/skills/webapp-uat/vendor/axe.min.js`) through the JS-execution tool —
+     (`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --print vendor/axe.min.js` —
+     the skill's own folder, which for a plugin install is outside the project tree
+     and not directly readable) through the JS-execution tool —
      read the file once per run and reuse its contents for every scenario, injecting
      inline rather than fetching from a CDN per scenario (each scenario starts on a
      fresh page, so the script still needs re-injecting per scenario, but not
@@ -543,6 +636,10 @@ Write `uat/runs/<run-id>/final-report.md`:
 - Unexpected behaviour, UX friction, spec gaps — each with a recommendation: no action
   / update the existing feature spec / new feature spec / needs more research.
 - Evidence paths and commits made this run.
+- Managed files — only when Phase 0 had something to say: `updated <paths>
+  (committed as <sha>)`; `unmanaged: <paths>`; "legacy `scripts/dev.sh` left
+  unmigrated — `/webapp-uat setup` migrates it". Nothing happened → no managed-files
+  bullet at all.
 - Note any point this run deviated from full manual approval (`--silent` skips taken,
   the resume-vs-fresh default used, fixtures auto-synthesized) — don't bury these.
 

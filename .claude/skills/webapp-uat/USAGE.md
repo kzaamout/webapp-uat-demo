@@ -9,7 +9,7 @@ read from this file each time, not regenerated, so wording is exact and consiste
 
 | Command | What it does |
 |---|---|
-| `/webapp-uat setup` | Discovery-assisted wizard — proposes `config.md`/`scripts/dev.sh` values from the repo, asks before writing |
+| `/webapp-uat setup` | Discovery-assisted wizard — proposes `config.md`/`scripts/dev.env` values from the repo, places the managed files, asks before writing |
 | `/webapp-uat` | Run all scenarios in `uat/scenarios/` |
 | `/webapp-uat <path>` | Run one scenario file, or all scenarios in a directory |
 | `/webapp-uat --help` | Print this reference |
@@ -27,7 +27,10 @@ read from this file each time, not regenerated, so wording is exact and consiste
 
 Discovery-assisted config wizard — inspects this repo (start/stop commands, port,
 whether Spec Kit's bug-workflow is installed, a `specs/` convention) and proposes
-`config.md`/`scripts/dev.sh` values instead of requiring you to find them by hand.
+`config.md`/`scripts/dev.env` values instead of requiring you to find them by hand.
+Also places the skill's managed files (`scripts/dev.sh`, `uat/scenarios/_template.md`)
+into your tree and migrates a pre-marker `scripts/dev.sh` (values shown, confirmed
+before anything is written).
 Every proposed value is labeled **detected** / **guessed** / **needs your input** —
 never presented as uniformly reliable. Nothing is written until you approve; runs
 safely even if `config.md` already exists (shows current vs. proposed, asks before
@@ -45,7 +48,8 @@ Runs every scenario file under `uat/scenarios/`. Equivalent to `/webapp-uat uat/
 ### `/webapp-uat --help`
 
 Prints this file and stops. No git check, no Chrome connection attempt, no app
-start — safe to run anytime.
+start — safe to run anytime. (Like every invocation, it first shows the managed-file
+status if anything is out of date; that check writes nothing.)
 
 ### `/webapp-uat generate [scope] [--priority tiers]`
 
@@ -149,6 +153,13 @@ flag always overrides `review-before-fix` from this file for that one run.
 
 ### Phase 0 — Pre-flight
 
+- **Managed files** (`scripts/dev.sh`, `uat/scenarios/_template.md`) brought to the
+  installed skill's version and committed as one `chore(webapp-uat): update managed
+  files (…)` commit — automatic, `--silent` included; your `scripts/dev.env` and
+  everything else you own is never touched. A file whose marker line you removed is
+  reported as unmanaged and left alone. A pre-marker `scripts/dev.sh` (values written
+  into it) keeps working; an attended run offers to migrate its values into
+  `scripts/dev.env` — `--silent` leaves it as is and says so in the report.
 - Git working tree (at `project-dir`) clean — if not, asked to commit, stash, or cancel.
 - `/chrome` connected.
 - `scripts/dev.sh start` / `wait-ready` / `stop` sanity-checked once.
@@ -244,12 +255,13 @@ explicit confirmation as the start-of-run purge.
   config.md.example               template — copy to config.md and fill in
   config.md                       your project's settings (you create this)
   discovered-environment.md       cached environment facts (auto-created)
-  templates/                      bundled dev.sh/_template.md copies (plugin installs)
+  scripts/sync-managed.sh         keeps the managed files (below) in sync with the skill
+  templates/                      bundled dev.sh / dev.env.example / _template.md
   vendor/axe.min.js               bundled axe-core for the accessibility audit
 
 uat/
   scenarios/
-    _template.md
+    _template.md                  managed — overwritten on skill update (marker in line 1)
     *.md
   fixtures/                       real files scenarios reference — never descriptions
   runs/<run-id>/
@@ -260,8 +272,13 @@ uat/
     screenshots, evidence
 
 scripts/
-  dev.sh                           start / stop / wait-ready wrapper for your app
+  dev.sh                           start / stop / wait-ready engine — managed, never hand-edited
+  dev.env                          your app's start/stop values (setup writes it; committed; yours)
 ```
+
+A *managed* file carries a "webapp-uat managed file" marker in its first lines;
+that marker is the skill's permission to overwrite it on update. Delete the line to
+take ownership. See `README.md`'s Updating section.
 
 ---
 

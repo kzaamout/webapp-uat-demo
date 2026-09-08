@@ -1,8 +1,9 @@
 # webapp-uat config
 
-Copy this file to `config.md` in this same folder and fill it in. `SKILL.md` itself
-is never hand-edited — every project-specific fact lives here instead, so upgrading
-the skill later is just replacing `SKILL.md`/`USAGE.md` wholesale.
+Copy this file to `config.md` in your project's `.claude/skills/webapp-uat/` and fill
+it in. `SKILL.md` itself is never hand-edited — every project-specific fact lives here
+(or in `scripts/dev.env`, for start/stop values), so updating the skill later never
+touches anything of yours; see `README.md`'s Updating section.
 
 ## Required
 

@@ -1,3 +1,4 @@
+<!-- webapp-uat managed file -- do not edit; overwritten on skill update; remove this line to take ownership -->
 # Scenario: <Name>
 
 - ID: UAT-001

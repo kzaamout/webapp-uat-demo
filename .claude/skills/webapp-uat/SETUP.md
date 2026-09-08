@@ -12,11 +12,12 @@ actually does once it's running, see `README.md`; for full command syntax, `USAG
 /plugin install webapp-uat@webapp-uat-marketplace
 ```
 
-Installs `.claude/skills/webapp-uat/` for you. `scripts/dev.sh` and
+Makes `/webapp-uat` available in this project (the skill's own files live in Claude
+Code's plugin cache, not in your tree). `scripts/dev.sh` and
 `uat/scenarios/_template.md` still need to land in your repo's own tree (a plugin
 install can only place files under `.claude/`) — step 2 below (`/webapp-uat setup`)
-does that for you automatically, copying them from templates bundled inside the
-installed skill.
+places them for you from the copies bundled inside the installed skill, and writes
+`scripts/dev.env` with your app's values next to them.
 
 **Manual alternative**, from this skill's source repo, copy into your app's repo root:
 
@@ -24,6 +25,7 @@ installed skill.
 .claude/skills/webapp-uat/    (this whole folder)
 uat/scenarios/_template.md
 scripts/dev.sh
+scripts/dev.env.example       (copy to scripts/dev.env — or let the wizard write it)
 ```
 
 Either way, this has to happen before Claude Code can do anything else here —
@@ -36,7 +38,7 @@ Either way, this has to happen before Claude Code can do anything else here —
 ```
 
 Inspects this repo (start/stop commands, port, whether Spec Kit is installed, a
-`specs/` convention) and proposes `config.md`/`scripts/dev.sh` values instead of
+`specs/` convention) and proposes `config.md`/`scripts/dev.env` values instead of
 making you hunt them down by hand — every value labeled detected / guessed / needs
 your input, nothing written until you confirm. Full walkthrough with an example
 transcript: `README.md`'s Installation & Setup section.
@@ -63,18 +65,20 @@ cp .claude/skills/webapp-uat/config.md.example .claude/skills/webapp-uat/config.
 ```
 
 Fill in `config.md` by hand — `project-name`, `project-dir`, `bug-fix-mechanism`,
-`spec-dir` (optional), `review-before-fix` — then open `scripts/dev.sh` and fill in
-`PROJECT_DIR`, `START_COMMAND`, `STOP_COMMAND`, `PORT` to match how your app actually
-starts, stops, and reports itself ready. `WAIT_TIMEOUT` (default 30, roughly seconds)
-is worth raising there for a slow-booting app — it's also overridable per-run via the
-environment.
+`spec-dir` (optional), `review-before-fix` — then copy `scripts/dev.env.example` to
+`scripts/dev.env` and fill in `START_COMMAND`, `STOP_COMMAND`, `PORT` to match how
+your app actually starts, stops, and reports itself ready (`WAIT_TIMEOUT` and
+`READY_COMMAND` are optional; the example file documents each key). Don't edit
+`scripts/dev.sh` itself — it's managed by the skill and overwritten on update.
 
 `SKILL.md`/`USAGE.md` themselves are never hand-edited either way — everything
 project-specific lives in `config.md`.
 
 ## 3. Confirm `scripts/dev.sh` actually works
 
-Whether it came from the wizard or by hand, test it once manually before trusting it:
+Whether `scripts/dev.env` came from the wizard or by hand, test the engine once
+manually before trusting it (the engine itself is never edited — every value it
+needs comes from `scripts/dev.env`):
 
 ```bash
 scripts/dev.sh start
@@ -127,3 +131,11 @@ backend verification both build on what it found.
 - [ ] `scripts/dev.sh start` / `wait-ready` / `stop` all work once, run manually
 - [ ] At least one scenario exists in `uat/scenarios/` with its fixtures in place
 - [ ] First `/webapp-uat` run completes and `discovered-environment.md` looks right
+
+## Updating later
+
+Plugin install: `claude plugin marketplace update webapp-uat-marketplace`, then
+`claude plugin update webapp-uat@webapp-uat-marketplace`, restart Claude Code. Manual
+install: re-copy the skill folder. The next `/webapp-uat` run brings `scripts/dev.sh`
+and `uat/scenarios/_template.md` up to date on its own; `scripts/dev.env`, `config.md`
+and everything else of yours is never touched. Details: `README.md` → Updating.
