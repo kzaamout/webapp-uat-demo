@@ -197,6 +197,7 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    run regardless; starting/stopping the app before the user has reviewed anything
    this wizard proposed would be jumping ahead of consent, not saving a step).
    Report every item's outcome individually once the write step finishes, e.g.:
+
    ```
    config.md ................... written
    scripts/dev.env .............. written
@@ -208,6 +209,7 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    .gitignore ................... 1 entry appended (.webapp-uat.pid; dev.log already covered by *.log)
    uat/fixtures/ ................. FAILED — permission denied creating directory
    ```
+
    If one item fails partway through, this is **best-effort, not atomic**: every
    item that already succeeded stays exactly as written — never rolled back because
    a later item failed — and the failure is named specifically per item, never a
@@ -342,6 +344,7 @@ Present a short summary of what was found. Anything genuinely ambiguous — ask,
 guess and silently commit to a wrong assumption that every future run then inherits.
 
 Example of what the file looks like once written:
+
 ```markdown
 # Environment (discovered 2026-08-13)
 - Routing: React Router, config at src/routes.tsx
@@ -404,11 +407,13 @@ lives in one place, not duplicated here.
 3. Compute data/fixture requirements across every draft as one consolidated,
    structured list — filename, extension, and any constraint, not a vague summary.
    A fixture multiple drafts need appears once in this list, not once per draft:
+
    ```
    uat/fixtures/sample-small.pdf — valid, <1MB
    uat/fixtures/sample-oversized.pdf — valid PDF, >10MB (size-limit rejection path)
    uat/fixtures/sample-corrupted.pdf — intentionally malformed (error-handling path)
    ```
+
    Where this list includes new **seed data** (test accounts, seeded rows) beyond
    static fixture files: creating that data is a DB write. Confirm it explicitly,
    `--silent` or not — the same treatment Phase 0/Phase 5's cleanup purges already
@@ -476,6 +481,7 @@ For each approved scenario:
      with a `<script src>` pointing at the pinned CDN build — never by pasting the
      library's source into the call (it is over half a megabyte; the vendored copy
      this skill used to bundle was dropped for exactly that reason):
+
      ```js
      await new Promise((ok, fail) => {
        const s = document.createElement('script');
@@ -487,6 +493,7 @@ For each approved scenario:
      });
      const results = await axe.run();
      ```
+
      Each scenario starts on a fresh page, so inject it per scenario; the browser's
      HTTP cache serves the file after the first fetch, so this costs one network
      round-trip per run, not per scenario. Parse `results.violations` — this is the
