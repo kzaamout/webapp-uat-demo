@@ -257,8 +257,8 @@ explicit confirmation as the start-of-run purge.
   USAGE.md                        this file
   SETUP.md                        one-time setup checklist
   config.md.example               template — copy to config.md and fill in
-  config.md                       your project's settings (setup writes it)
-  discovered-environment.md       cached environment facts (auto-created)
+  config.md                       your project's settings (setup writes it and gitignores it)
+  discovered-environment.md       cached environment facts (auto-created; gitignored by setup)
   scripts/sync-managed.sh         keeps the managed files (below) in sync with the skill
                                     (--check / --apply / --legacy-values / --print)
   templates/                      bundled dev.sh / dev.env.example / _template.md

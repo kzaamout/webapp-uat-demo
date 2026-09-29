@@ -184,14 +184,19 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    <repo root> --apply` and report each managed file from its own output line
    (`created` / `updated` / `in-sync` / `skipped-unmanaged` / `skipped-legacy`).
    `mkdir -p uat/scenarios uat/runs uat/artifacts uat/fixtures` for whichever don't
-   already exist. Then check that the two files `scripts/dev.sh start` will generate
-   in this repo — `dev.log` and `.webapp-uat.pid` — are gitignored: test each with
-   `git check-ignore`, not by grepping for literal lines, so an existing pattern like
-   `*.log` counts as coverage. Whichever isn't covered, append to the repo's
-   `.gitignore` (creating the file if it doesn't exist) as part of this same write
-   step — Phase 0 requires a clean working tree before every run, so leaving these
-   un-ignored means the first `start` blocks the very next run. Already covered →
-   left as-is, reported like every other item. **Does not** run
+   already exist. Then check that four files are gitignored — the two `scripts/dev.sh start`
+   will generate in this repo, `dev.log` and `.webapp-uat.pid`, and the two
+   per-project files this skill keeps under `.claude/skills/webapp-uat/`, `config.md`
+   (it carries an absolute `project-dir`, so committing it breaks every other clone)
+   and `discovered-environment.md` (a cache): test each with `git check-ignore`, not
+   by grepping for literal lines, so an existing pattern like `*.log` counts as
+   coverage. Whichever isn't covered, append to the repo's `.gitignore` (creating the
+   file if it doesn't exist) as part of this same write step — Phase 0 requires a
+   clean working tree before every run, so leaving these un-ignored means the first
+   `start`, or the freshly written `config.md` itself, blocks the very next run.
+   Already covered → left as-is, reported like every other item. `scripts/dev.env`
+   is deliberately not on this list: it holds nothing machine-specific and is meant
+   to be committed. **Does not** run
    `scripts/dev.sh start/stop/wait-ready` itself —
    that stays a manual verification step (Phase 0 sanity-checks it on the first real
    run regardless; starting/stopping the app before the user has reviewed anything
@@ -206,7 +211,8 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    uat/scenarios/ ............... already existed, left as-is
    uat/runs/ ..................... created
    uat/artifacts/ ................ created
-   .gitignore ................... 1 entry appended (.webapp-uat.pid; dev.log already covered by *.log)
+   .gitignore ................... 3 entries appended (.webapp-uat.pid, .claude/skills/webapp-uat/config.md,
+                                    .claude/skills/webapp-uat/discovered-environment.md; dev.log already covered by *.log)
    uat/fixtures/ ................. FAILED — permission denied creating directory
    ```
 

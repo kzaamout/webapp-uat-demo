@@ -99,11 +99,15 @@ scripts/dev.sh wait-ready
 scripts/dev.sh stop
 ```
 
-`start` writes two files into your repo (`dev.log`, `.webapp-uat.pid`). Both must be
+`start` writes two files into your repo (`dev.log`, `.webapp-uat.pid`), and the
+skill keeps two more under `.claude/skills/webapp-uat/` (`config.md`, which holds an
+absolute `project-dir`, and the `discovered-environment.md` cache). All four must be
 gitignored — Phase 0 requires a clean git working tree before every run, so leaving
-them untracked-and-unignored blocks the very next run. The setup wizard (step 2)
-checks and appends these `.gitignore` entries for you as part of its write step; if
-you went the manual route (step 2b) instead, add them yourself.
+them untracked-and-unignored blocks the very next run, and a committed `config.md`
+breaks every other clone. The setup wizard (step 2) checks and appends these
+`.gitignore` entries for you as part of its write step; if you went the manual route
+(step 2b) instead, add them yourself. `scripts/dev.env` is the exception: commit it,
+it holds nothing machine-specific.
 
 ## 4. Confirm Chrome is actually connected
 
