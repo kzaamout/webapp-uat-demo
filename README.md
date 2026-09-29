@@ -32,7 +32,10 @@ migrations, seeds demo data, and starts the dev server on **http://localhost:300
 First run pulls the `postgres:16-alpine` image, which can take a few minutes
 depending on your network — that's normal, not a hang.
 
-Stop everything with `docker compose down` — exactly what `scripts/dev.sh stop` does.
+Stop everything with `docker compose down` — `scripts/dev.sh stop` does that after
+stopping the dev server. `scripts/dev.sh` is `webapp-uat`'s managed engine (don't
+edit it; the skill replaces it on update); this app's start/stop values live in
+`scripts/dev.env`.
 
 **Confirm the wiring once, by hand, before trusting `webapp-uat` to rely on it**:
 
@@ -96,13 +99,11 @@ current-vs-proposed comparison path instead.
 **Expected outcome**: start/stop are **detected** (`run.sh` + `docker-compose.yml`
 at this repo's root — the top tier of the most-specific-evidence rule), port is
 **detected** or **guessed** `3000`, `bug-fix-mechanism` proposes `direct` (no
-`.specify/` here), `spec-dir` stays unset (no `specs/` here). The wizard also
-reports this repo's `scripts/dev.sh` as *legacy* — the pre-managed-engine wrapper
-with its values written in, kept on purpose — and offers to move those values into
-`scripts/dev.env` and swap in the managed engine; accept or decline, both work.
-`uat/scenarios/_template.md` already carries the managed-file marker, so it is
-reported in sync. On a re-run, current `config.md` values are shown next to the
-proposals, per field.
+`.specify/` here), `spec-dir` stays unset (no `specs/` here). Both managed files
+(`scripts/dev.sh`, `uat/scenarios/_template.md`) are reported in sync and
+`scripts/dev.env` already holds this app's values, so the wizard proposes them
+unchanged. On a re-run, current `config.md` values are shown next to the proposals,
+per field.
 
 **Why**: this app was built with a root-level `run.sh`+`docker-compose.yml` pairing
 specifically to match this detection rule — and critically, this only resolves
