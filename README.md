@@ -4,9 +4,10 @@ A small internal document-library app, built specifically to exercise every core
 capability of the [`webapp-uat`](https://github.com/kzaamout/claude-uat-skill)
 Claude Code skill — not a real
 product. This repo is deliberately self-contained: the skill is already installed at
-`.claude/skills/webapp-uat/`, already configured (`config.md`), and already has a
-starter set of real scenarios in `uat/scenarios/`. Clone it, run it, and you can
-start exercising `webapp-uat` in minutes.
+`.claude/skills/webapp-uat/`, `/webapp-uat setup` writes its `config.md` on the first
+run (that file holds an absolute path, so it is gitignored rather than shipped), and
+a starter set of real scenarios is in `uat/scenarios/`. Clone it, run it, and you
+can start exercising `webapp-uat` in minutes.
 
 If you're reading this from the skill's own source repo
 (`claude-uat-skill`), this is that project's `demo-app/` submodule — kept as an
@@ -88,14 +89,20 @@ capability of the skill it's actually proving.
 
 ### 1. `/webapp-uat setup`
 
-**Steps**: run it against this repo (safe to re-run — `config.md` already exists, so
-this exercises the re-run/comparison path, not first-time setup).
+**Steps**: run it against this repo. On a fresh clone this is first-time setup
+(`config.md` is gitignored, so it doesn't ship); re-running it later exercises the
+current-vs-proposed comparison path instead.
 
 **Expected outcome**: start/stop are **detected** (`run.sh` + `docker-compose.yml`
 at this repo's root — the top tier of the most-specific-evidence rule), port is
 **detected** or **guessed** `3000`, `bug-fix-mechanism` proposes `direct` (no
-`.specify/` here), `spec-dir` stays unset (no `specs/` here). Current `config.md`
-values are shown next to these proposals, per field.
+`.specify/` here), `spec-dir` stays unset (no `specs/` here). The wizard also
+reports this repo's `scripts/dev.sh` as *legacy* — the pre-managed-engine wrapper
+with its values written in, kept on purpose — and offers to move those values into
+`scripts/dev.env` and swap in the managed engine; accept or decline, both work.
+`uat/scenarios/_template.md` already carries the managed-file marker, so it is
+reported in sync. On a re-run, current `config.md` values are shown next to the
+proposals, per field.
 
 **Why**: this app was built with a root-level `run.sh`+`docker-compose.yml` pairing
 specifically to match this detection rule — and critically, this only resolves

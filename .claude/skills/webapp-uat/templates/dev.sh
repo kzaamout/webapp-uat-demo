@@ -42,6 +42,16 @@ PORT="${PORT:-}"
 
 PIDFILE="$PROJECT_DIR/.webapp-uat.pid"
 
+# signal_group <SIG> <pid> -- the start job runs in its own process group (see
+# `start`), so one signal reaches every descendant, not just the direct children.
+# The per-pid and per-parent sends are belt-and-braces for a pidfile written by
+# an older engine.
+signal_group() {
+  kill "-$1" -- "-$2" 2>/dev/null
+  kill "-$1" "$2" 2>/dev/null
+  pkill "-$1" -P "$2" 2>/dev/null
+}
+
 case "${1:-}" in
   start)
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
@@ -49,27 +59,29 @@ case "${1:-}" in
       exit 0
     fi
     cd "$PROJECT_DIR" || exit 1
-    nohup $START_COMMAND > dev.log 2>&1 &
-    echo $! > "$PIDFILE"
-    echo "Started (pid $!)"
+    # Run START_COMMAND through a shell, so `&&`, pipes, env prefixes and quoting all
+    # work. Job control (set -m) puts the job in its own process group, which is what
+    # lets `stop` signal every descendant at once and is why SIGINT is not ignored by
+    # the backgrounded job (a background job started without job control ignores it).
+    set -m
+    nohup bash -c "$START_COMMAND" > dev.log 2>&1 &
+    PID=$!
+    set +m
+    echo "$PID" > "$PIDFILE"
+    echo "Started (pid $PID)"
     ;;
   stop)
     if [ -f "$PIDFILE" ]; then
       PID="$(cat "$PIDFILE")"
-      # Ctrl+C equivalent -- SIGINT is what an interactive terminal sends.
-      kill -INT "$PID" 2>/dev/null
+      # Ctrl+C equivalent first -- SIGINT is what an interactive terminal sends.
+      signal_group INT "$PID"
       sleep 2
-      # If START_COMMAND didn't forward SIGINT to its own children, this catches them.
-      pkill -INT -P "$PID" 2>/dev/null
-      # A backgrounded process started from a script ignores SIGINT (no job control),
-      # so escalate: SIGTERM, then SIGKILL as the last resort.
+      # Escalate only if the job is still there: SIGTERM, then SIGKILL as the last resort.
       if kill -0 "$PID" 2>/dev/null; then
-        kill -TERM "$PID" 2>/dev/null
-        pkill -TERM -P "$PID" 2>/dev/null
+        signal_group TERM "$PID"
         sleep 1
         if kill -0 "$PID" 2>/dev/null; then
-          kill -KILL "$PID" 2>/dev/null
-          pkill -KILL -P "$PID" 2>/dev/null
+          signal_group KILL "$PID"
         fi
       fi
       rm -f "$PIDFILE"

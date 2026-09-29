@@ -11,8 +11,10 @@
 #   bash sync-managed.sh [<project-root>] --check          report per-file status; always exits 0
 #   bash sync-managed.sh [<project-root>] --apply          copy in every differing/missing managed file
 #   bash sync-managed.sh [<project-root>] --legacy-values  print dev.env lines from a pre-marker dev.sh
+#                                                            (exit 3 if it isn't one, 2 if no START_COMMAND
+#                                                            could be extracted)
 #   bash sync-managed.sh --print <bundled path>              print a file bundled in the skill folder
-#                                                            (USAGE.md, vendor/axe.min.js, ...) -- for plugin
+#                                                            (USAGE.md, templates/dev.env.example, ...) -- for plugin
 #                                                            installs the folder is outside the project, where
 #                                                            the harness blocks direct reads; running this
 #                                                            script is pre-authorized, so it reads on your behalf
@@ -168,17 +170,26 @@ case "$MODE" in
       echo "not-legacy"
       exit 3
     fi
-    lines="$(grep -E '^(START_COMMAND|STOP_COMMAND|PORT|WAIT_TIMEOUT)=' "$ROOT/$LEGACY_FILE")"
-    (
-      unset START_COMMAND STOP_COMMAND PORT WAIT_TIMEOUT
-      eval "$lines"
+    # PROJECT_DIR is sourced too (never printed) so a value that references it still
+    # expands to the legacy file's absolute path instead of tripping `set -u`.
+    lines="$(grep -E '^(PROJECT_DIR|START_COMMAND|STOP_COMMAND|PORT|WAIT_TIMEOUT)=' "$ROOT/$LEGACY_FILE")"
+    out="$(
+      set +u
+      unset PROJECT_DIR START_COMMAND STOP_COMMAND PORT WAIT_TIMEOUT
+      eval "$lines" 2>/dev/null
       q="'\\''"
       for k in START_COMMAND STOP_COMMAND PORT WAIT_TIMEOUT; do
         eval "v=\${$k:-}"
         [ -n "$v" ] || continue
         printf "%s='%s'\n" "$k" "${v//\'/$q}"
       done
-    )
-    exit 0
+    )"
+    case "$out" in
+      START_COMMAND=*) printf '%s\n' "$out"; exit 0 ;;
+      *)
+        echo "sync-managed: could not extract START_COMMAND from $LEGACY_FILE -- fill scripts/dev.env in by hand" >&2
+        exit 2
+        ;;
+    esac
     ;;
 esac

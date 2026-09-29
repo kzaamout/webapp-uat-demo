@@ -5,7 +5,8 @@ actually does once it's running, see `README.md`; for full command syntax, `USAG
 
 ## 1. Get the skill into your app's repo
 
-**One-command path** (recommended), from inside your app's repo:
+**Plugin path** (recommended — two commands, nothing copied by hand), from inside
+your app's repo:
 
 ```
 /plugin marketplace add kzaamout/claude-uat-skill
@@ -60,16 +61,28 @@ are left as-is, and only the outstanding ones are retried.
 
 ### 2b. Manual alternative
 
+With a copied-folder install both example files are already in your tree:
+
 ```bash
+mkdir -p .claude/skills/webapp-uat
 cp .claude/skills/webapp-uat/config.md.example .claude/skills/webapp-uat/config.md
+cp scripts/dev.env.example scripts/dev.env
 ```
 
+With a plugin install the skill folder lives in Claude Code's plugin cache, not in
+your tree, so take the two example files from this skill's source repo instead
+([`config.md.example`](https://github.com/kzaamout/claude-uat-skill/blob/main/.claude/skills/webapp-uat/config.md.example),
+[`dev.env.example`](https://github.com/kzaamout/claude-uat-skill/blob/main/scripts/dev.env.example))
+and save them at the same two paths. `scripts/dev.sh` and `uat/scenarios/_template.md`
+still get placed by the first `/webapp-uat` run's pre-flight.
+
 Fill in `config.md` by hand — `project-name`, `project-dir`, `bug-fix-mechanism`,
-`spec-dir` (optional), `review-before-fix` — then copy `scripts/dev.env.example` to
-`scripts/dev.env` and fill in `START_COMMAND`, `STOP_COMMAND`, `PORT` to match how
-your app actually starts, stops, and reports itself ready (`WAIT_TIMEOUT` and
-`READY_COMMAND` are optional; the example file documents each key). Don't edit
-`scripts/dev.sh` itself — it's managed by the skill and overwritten on update.
+`spec-dir` (optional), `review-before-fix` — and `scripts/dev.env`'s `START_COMMAND`,
+`STOP_COMMAND`, `PORT` to match how your app actually starts, stops, and reports
+itself ready (`WAIT_TIMEOUT` and `READY_COMMAND` are optional; the example file
+documents each key; `START_COMMAND` runs through a shell, so `&&`, pipes and env
+prefixes are fine). Don't edit `scripts/dev.sh` itself — it's managed by the skill
+and overwritten on update.
 
 `SKILL.md`/`USAGE.md` themselves are never hand-edited either way — everything
 project-specific lives in `config.md`.
@@ -105,11 +118,12 @@ Code's Chrome bridge on macOS.
 ## 5. Write one real scenario
 
 ```bash
-cp uat/scenarios/_template.md uat/scenarios/my-first-scenario.md
+tail -n +2 uat/scenarios/_template.md > uat/scenarios/my-first-scenario.md
 ```
 
-Fill it in. Drop anything it needs — a real, valid file, not a placeholder — into
-`uat/fixtures/`.
+(`tail -n +2` drops the template's first line — the "managed file" marker, which
+belongs to the template, not to your scenario.) Fill it in. Drop anything it needs —
+a real, valid file, not a placeholder — into `uat/fixtures/`.
 
 ## 6. Run it
 

@@ -144,8 +144,9 @@ review-before-fix: on
 # backend-stores: postgres, qdrant
 ```
 
-Missing `config.md` → the skill stops at Phase -1 and points here. A per-invocation
-flag always overrides `review-before-fix` from this file for that one run.
+Missing `config.md` → Phase -1 offers to run setup on the spot, or points here if you
+decline. A per-invocation flag always overrides `review-before-fix` from this file
+for that one run.
 
 ---
 
@@ -156,10 +157,13 @@ flag always overrides `review-before-fix` from this file for that one run.
 - **Managed files** (`scripts/dev.sh`, `uat/scenarios/_template.md`) brought to the
   installed skill's version and committed as one `chore(webapp-uat): update managed
   files (…)` commit — automatic, `--silent` included; your `scripts/dev.env` and
-  everything else you own is never touched. A file whose marker line you removed is
-  reported as unmanaged and left alone. A pre-marker `scripts/dev.sh` (values written
-  into it) keeps working; an attended run offers to migrate its values into
-  `scripts/dev.env` — `--silent` leaves it as is and says so in the report.
+  everything else you own is never touched. A file with no marker line (you removed
+  it, or it predates the marker) is reported as unmanaged and left alone. A
+  pre-marker `scripts/dev.sh` (values written into it) keeps working; an attended run
+  offers to migrate its values (start, stop, port, wait timeout) into
+  `scripts/dev.env` — `--silent` leaves it as is and says so in the report. No
+  `scripts/dev.env` next to a managed `scripts/dev.sh` → offered setup, same as a
+  missing `config.md`.
 - Git working tree (at `project-dir`) clean — if not, asked to commit, stash, or cancel.
 - `/chrome` connected.
 - `scripts/dev.sh start` / `wait-ready` / `stop` sanity-checked once.
@@ -253,11 +257,11 @@ explicit confirmation as the start-of-run purge.
   USAGE.md                        this file
   SETUP.md                        one-time setup checklist
   config.md.example               template — copy to config.md and fill in
-  config.md                       your project's settings (you create this)
+  config.md                       your project's settings (setup writes it)
   discovered-environment.md       cached environment facts (auto-created)
   scripts/sync-managed.sh         keeps the managed files (below) in sync with the skill
+                                    (--check / --apply / --legacy-values / --print)
   templates/                      bundled dev.sh / dev.env.example / _template.md
-  vendor/axe.min.js               bundled axe-core for the accessibility audit
 
 uat/
   scenarios/
@@ -278,7 +282,11 @@ scripts/
 
 A *managed* file carries a "webapp-uat managed file" marker in its first lines;
 that marker is the skill's permission to overwrite it on update. Delete the line to
-take ownership. See `README.md`'s Updating section.
+take ownership. When you copy `_template.md` into a new scenario, drop that first
+line — it belongs to the template, not to your scenario. See `README.md`'s Updating
+section. With a plugin install the skill folder lives in Claude Code's plugin cache,
+not in your tree; only `config.md` and `discovered-environment.md` are created under
+`.claude/skills/webapp-uat/` in the project.
 
 ---
 

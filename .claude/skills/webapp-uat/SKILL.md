@@ -1,6 +1,6 @@
 ---
 name: webapp-uat
-description: Run or generate an end-user UAT pass on a web app — review/generate scenarios, test in Chrome with backend verification, classify findings by category and severity, fix confirmed bugs (with restart + browser retest), document everything else, and report back with next-step options. Supports --help, generate, --silent, and --review-before-fix.
+description: Run or generate an end-user UAT pass on a web app — review/generate scenarios, test in Chrome with backend verification, classify findings by category and severity, fix confirmed bugs (with restart + browser retest), document everything else, and report back with next-step options. Supports setup, --help, generate, --silent, and --review-before-fix.
 allowed-tools: Bash(bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh *)
 ---
 
@@ -40,25 +40,25 @@ Status at load, computed by the bundled sync script (byte comparison; exits 0 al
 !`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --check`
 
 Read those lines before anything else, in every mode including `--help`: if any
-managed file is not `in-sync`, or the `values-file` line says `missing`, print those
-lines to the user verbatim as the first thing you say, then continue with the mode
-that was invoked. Every file `in-sync` and the values file present → say nothing
-about managed files. A policy placeholder instead of status lines (an organization
+managed file is not `in-sync`, or the `values-file` line says `missing` while
+`scripts/dev.sh` is not `legacy` (a legacy wrapper carries its own values and needs
+no `dev.env`), print those lines to the user verbatim as the first thing you say,
+then continue with the mode that was invoked. Every file `in-sync` and the values
+file present (or not needed) → say nothing about managed files. A policy placeholder instead of status lines (an organization
 setting disabled shell execution in skills) → say nothing; Phase 0 runs the same
 check itself. Applying an update is Phase 0's job (and Setup mode's), never the
 load step's.
 
-Every file bundled with this skill — `templates/`, `vendor/axe.min.js`,
-`scripts/sync-managed.sh` — is addressed as `${CLAUDE_SKILL_DIR}/<path>`, which
-resolves to this skill's own folder for a plugin install (the plugin cache), a
-project-level install, or a manual copy alike. Never assume the skill folder is
-inside the project tree. For a plugin install that folder is outside the project,
-and Claude Code blocks direct reads there (`Read`, `cat`, …) — but running the
-bundled script is pre-authorized, so read any bundled file through it:
-`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --print <path>` (e.g.
-`--print USAGE.md` for `--help`, `--print vendor/axe.min.js` for the accessibility
-check, `--print templates/dev.env.example`). Write the command exactly like that —
-no extra quoting — so it matches the pre-authorized prefix.
+Every file bundled with this skill — `templates/`, `scripts/sync-managed.sh` — is
+addressed as `${CLAUDE_SKILL_DIR}/<path>`, which resolves to this skill's own folder
+for a plugin install (the plugin cache), a project-level install, or a manual copy
+alike. Never assume the skill folder is inside the project tree. For a plugin
+install that folder is outside the project, and Claude Code blocks direct reads
+there (`Read`, `cat`, …) — but running the bundled script is pre-authorized, so read
+any bundled file through it: `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh
+--print <path>` (e.g. `--print USAGE.md` for `--help`, `--print
+templates/dev.env.example`). Write the script's path exactly like that — no extra
+quoting around `${CLAUDE_SKILL_DIR}` — so it matches the pre-authorized prefix.
 
 ---
 
@@ -132,6 +132,18 @@ propose → confirm → write pattern `generate` already uses for scenarios.
      as ready (a health-check route, a compose `healthcheck`), and `WAIT_TIMEOUT`
      only with evidence of a slow boot — otherwise leave both out and let the
      engine's defaults apply. Never propose a project path: the engine derives it.
+   - **Existing managed files:** run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh
+     --check` now, before drafting, so the draft in step 5 can say what the write
+     step will do to each file. `legacy` for `scripts/dev.sh` (a pre-marker wrapper
+     with values written into it) → run `--legacy-values` and use what it prints as
+     the `dev.env` proposal — start command, stop command, port, and wait timeout
+     when the legacy file set one; the old absolute project path is dropped because
+     the managed engine derives it — with discovery filling only keys the legacy
+     file lacks; each kept value is **detected** (evidence: the legacy script).
+     `--legacy-values` exiting 2 (nothing extractable) → fall back to discovery and
+     say so. `unmanaged` (a file with no marker) → the draft asks whether to replace
+     it. `missing` / `update-available` → the draft lists it as a file to place or
+     refresh.
 3. **Detect the bug-fix mechanism** — a `.specify/` directory, or `specify` on PATH,
    → propose `bug-fix-mechanism: spec-kit`. The exact `bug-assess-command` /
    `bug-fix-command` / `bug-test-command` values are never guessed at — surface
@@ -140,8 +152,13 @@ propose → confirm → write pattern `generate` already uses for scenarios.
 4. **Detect `spec-dir`** — a `specs/` directory containing `spec.md` files, or an
    equivalent convention → propose it. Nothing found → leave unset, note that
    spec-derived generation and the UI-conformance check will no-op without it.
-5. **Present one consolidated draft** — `config.md` plus the `scripts/dev.env`
-   block — including `project-name` — always asked
+5. **Present one consolidated draft** — `config.md` (including `project-dir`,
+   **detected**: the repo root step 1 resolved) plus the `scripts/dev.env` block,
+   plus one line per managed file saying what the write step will do to it
+   (`create` / `refresh` / `already in sync`; for an `unmanaged` one, an explicit
+   choice: **replace with the managed version — your edits are lost** / **keep
+   yours**; for a `legacy` `scripts/dev.sh`: replaced by the managed engine once
+   `dev.env` holds its values) — including `project-name` — always asked
    directly and labeled **needs your input**, since nothing in the repo itself can
    supply a human-chosen project name. Every value labeled **detected** (concrete
    evidence found — name the evidence), **guessed** (a heuristic default, no real
@@ -160,15 +177,11 @@ propose → confirm → write pattern `generate` already uses for scenarios.
    with per-key approval, exactly as step 7 does for `config.md`, and only accepted
    keys change. Never write project values into `scripts/dev.sh` — it is a managed
    file with none in it (see "Managed files" above). Then the managed files
-   themselves: run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --check` and act
-   on its output first — `legacy` (a pre-marker `scripts/dev.sh` with values written
-   into it) → run `--legacy-values`, show the values it keeps (start command, stop
-   command, port; the old absolute project path is dropped because the managed
-   engine derives it) and use them as the `dev.env` proposal above (discovery fills
-   only keys the legacy file lacks); on approval delete the legacy file so `--apply`
-   replaces it. `unmanaged` (marker removed by the user) → offer "replace with the
-   managed version — your edits are lost" / "keep yours"; delete only on an explicit
-   yes. Then run `--apply` and report each managed file from its own output line
+   themselves, exactly as the approved draft said (step 2 already ran `--check`): a
+   `legacy` `scripts/dev.sh` → its values are now in `dev.env`, so delete the legacy
+   file; an `unmanaged` file the user chose to replace → delete it; one they chose
+   to keep → leave it alone. Then run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh
+   <repo root> --apply` and report each managed file from its own output line
    (`created` / `updated` / `in-sync` / `skipped-unmanaged` / `skipped-legacy`).
    `mkdir -p uat/scenarios uat/runs uat/artifacts uat/fixtures` for whichever don't
    already exist. Then check that the two files `scripts/dev.sh start` will generate
@@ -211,9 +224,10 @@ propose → confirm → write pattern `generate` already uses for scenarios.
 
 ## Phase 0 — Pre-flight
 
-- **Managed files** — first, before anything else in this phase. From the project
-  root, run `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --apply` and act on
-  its output line by line:
+- **Managed files** — first, before anything else in this phase. Run
+  `bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh <project-dir> --apply` — the
+  root from `config.md`, passed explicitly so this step can't resolve a different
+  repo than the rest of the run — and act on its output line by line:
   - `updated` / `created` → those files were just brought to the installed skill's
     version. `changed: N` with N > 0 → commit exactly the paths on the
     `changed-paths:` line and nothing else: `git add <those paths>` then
@@ -222,23 +236,27 @@ propose → confirm → write pattern `generate` already uses for scenarios.
     clean-tree check below would otherwise block every run right after every skill
     update. Never `git add -A`; unrelated uncommitted changes are the clean-tree
     check's business. Keep the list (and the commit) for the final report.
-  - `skipped-unmanaged` → the marker was removed; leave the file alone. Print one
-    line: "`<path>` is unmanaged (marker removed) — `/webapp-uat setup` can re-adopt
-    it." Keep it for the final report.
+  - `skipped-unmanaged` → the file carries no marker (removed by the user, or placed
+    by an install that predates the marker); leave it alone. Print one line:
+    "`<path>` is unmanaged (no marker) — `/webapp-uat setup` can re-adopt it." Keep
+    it for the final report.
   - `skipped-legacy` (a pre-marker `scripts/dev.sh` with values written into it) →
     it still works and the run may use it. Not `--silent` → offer migration now: run
-    `--legacy-values`, show the values it keeps (start command, stop command, port;
-    the old absolute project path is dropped because the engine derives it), and
-    ask. Confirmed → write `scripts/dev.env` from those lines, delete the legacy
+    `--legacy-values`, show the values it keeps (start command, stop command, port,
+    and wait timeout when the legacy file set one; the old absolute project path is
+    dropped because the engine derives it), and ask. `--legacy-values` exiting 2
+    (nothing extractable) → say so and leave migration to `/webapp-uat setup`.
+    Confirmed → write `scripts/dev.env` from those lines, delete the legacy
     `scripts/dev.sh`, run `--apply` again (it reports `created`), then one
     path-scoped commit of `scripts/dev.sh` + `scripts/dev.env`:
     `chore(webapp-uat): migrate scripts/dev.sh to managed engine + scripts/dev.env`.
     Declined, or `--silent` → continue with the legacy wrapper and keep "legacy
     `scripts/dev.sh` left unmigrated — `/webapp-uat setup` migrates it" for the
     final report.
-  - `values-file … missing` and `scripts/dev.sh` was **not** `skipped-legacy` → stop:
-    the managed engine can't run without `scripts/dev.env`. Say "run
-    `/webapp-uat setup`". (A legacy wrapper needs no `dev.env`.)
+  - `values-file … missing` and `scripts/dev.sh` was **not** `skipped-legacy` → the
+    managed engine can't run without `scripts/dev.env`: offer to run setup mode now
+    (the same offer a missing `config.md` gets in Phase -1) and stop this run if
+    it's declined. (A legacy wrapper needs no `dev.env`.)
   - The script can't be found, or exits non-zero → print "managed files could not
     be checked (<reason>)" and continue with the files as they are. Never block a
     run on this step.
@@ -355,6 +373,9 @@ lives in one place, not duplicated here.
    field:
    - **spec-derived** — walk `spec.md` and `tasks.md` per feature under `spec-dir`
      (scoped to `scope` if given), one candidate scenario per acceptance criterion.
+     Record the originating criterion in each draft — the spec path in `Related
+     feature` and the criterion's number or text in Notes — so it is traceable
+     without re-reading the spec.
      Derive persona variants from the use cases already in the spec — no separate
      persona definition needed; where a flow plausibly behaves differently per role
      (admin/standard/guest/whatever the specs actually reference), draft one variant
@@ -427,8 +448,9 @@ For each approved scenario:
    it isn't (`scripts/dev.sh start`).
 2. **Log in explicitly** as the account named in the scenario's Preconditions, every
    time — don't assume continuity from whatever the previous scenario left the browser
-   in. Fixed test accounts come from the seed data Phase 0/generation manages, suffixed
-   with this run's id (see R7 naming below), not improvised per scenario.
+   in. Use the fixed account the scenario names: one from the app's own seed data, or,
+   for an account this skill seeded for the run, its run-id-suffixed name (see R7
+   naming below) — never one improvised per scenario.
 3. Using `/chrome`, drive the scenario from its defined starting state, in a visible
    window, at the viewport(s) the scenario declares (default: mobile 375px + desktop,
    if none declared). Any file a step requires must be an exact path under
@@ -450,24 +472,30 @@ For each approved scenario:
      deliberately to test the server boundary, not encountered as an app failure.
 4. Note actual vs. expected result.
 5. **Expanded checks**, every scenario:
-   - **Accessibility:** inject axe-core from this skill's own bundled copy
-     (`bash ${CLAUDE_SKILL_DIR}/scripts/sync-managed.sh --print vendor/axe.min.js` —
-     the skill's own folder, which for a plugin install is outside the project tree
-     and not directly readable) through the JS-execution tool —
-     read the file once per run and reuse its contents for every scenario, injecting
-     inline rather than fetching from a CDN per scenario (each scenario starts on a
-     fresh page, so the script still needs re-injecting per scenario, but not
-     re-fetched over the network each time) —
+   - **Accessibility:** load axe-core into the page through the JS-execution tool
+     with a `<script src>` pointing at the pinned CDN build — never by pasting the
+     library's source into the call (it is over half a megabyte; the vendored copy
+     this skill used to bundle was dropped for exactly that reason):
      ```js
-     const s = document.createElement('script');
-     s.textContent = /* the vendored axe.min.js file's contents, read once this run */;
-     document.head.appendChild(s);
+     await new Promise((ok, fail) => {
+       const s = document.createElement('script');
+       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js';
+       s.integrity = 'sha384-hU7+BBSOB5dIfLKxLW/kXBTPxNWTSmiQ8F4jiCU0++kNwNoOt7zVkEum1ZqDhASc';
+       s.crossOrigin = 'anonymous';
+       s.onload = ok; s.onerror = fail;
+       document.head.appendChild(s);
+     });
      const results = await axe.run();
      ```
-     Parse `results.violations` — this is the source of accessibility findings, not
-     visual inspection of the DOM. If the vendored file is ever missing, fall back to
-     the CDN URL (`https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js`)
-     rather than skipping the check.
+     Each scenario starts on a fresh page, so inject it per scenario; the browser's
+     HTTP cache serves the file after the first fetch, so this costs one network
+     round-trip per run, not per scenario. Parse `results.violations` — this is the
+     source of accessibility findings, not visual inspection of the DOM. If the
+     script fails to load (network blocked, integrity mismatch), retry once from
+     `https://cdn.jsdelivr.net/npm/axe-core@4.10.0/axe.min.js` without the
+     `integrity` attribute; if that fails too, record the accessibility check as
+     **not run** for that scenario (a `TEST_ENVIRONMENT` note, never a pass) rather
+     than skipping it silently.
    - **i18n:** only if discovery marked the app multi-locale — raw/unresolved
      translation keys, unresolved placeholders, missing strings. App not marked
      multi-locale → skip this specific check for the scenario, note it wasn't
@@ -670,5 +698,5 @@ identifier across runs.
 ---
 *Optional for later, not needed yet: a `uat/<run-id>` git branch per run if you want
 runs isolated from your working branch; tightening `.claude/settings.local.json`
-beyond the default once `REVIEW_BEFORE_FIX` moves to off for real (see Phase 4's
-config note in `USAGE.md`).*
+beyond the default once `REVIEW_BEFORE_FIX` moves to off for real (see the Safety
+behaviors section in `USAGE.md`).*
